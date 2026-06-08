@@ -9,14 +9,20 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class IrcServer {
+
+    private static final int THREADS = 2;
 
     private final int port;
     private Selector selector;
     private ServerSocketChannel serverSocketChannel;
-    private final ConcurrentHashMap<SocketChannel, IrcSession> sessions = new ConcurrentHashMap<>();
+    private final IrcServerState ircServerState = new IrcServerState();
+    private final BlockingDeque<IrcCommand> ircCommandQueue = new LinkedBlockingDeque<>();
 
     public IrcServer(int port) {
         this.port = port;
@@ -28,6 +34,10 @@ public class IrcServer {
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.bind(new InetSocketAddress(port));
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        ExecutorService workerPool = Executors.newFixedThreadPool(THREADS);
+        for (int i = 0; i < THREADS; i++) {
+            workerPool.submit(new IrcCommandWorker(ircCommandQueue, ircServerState));
+        }
         System.out.println("Server listening on port " + port);
         loop();
     }
@@ -52,31 +62,32 @@ public class IrcServer {
     private void handleAccept() throws IOException {
         SocketChannel client = serverSocketChannel.accept();
         client.configureBlocking(false);
-        client.register(selector, SelectionKey.OP_READ);
         IrcSession ircSession = new IrcSession(client);
-        this.sessions.put(client, ircSession);
+        this.ircServerState.addSession(ircSession);
+        client.register(selector, SelectionKey.OP_READ, ircSession);
         System.out.println("Client connected: " + client.getLocalAddress());
     }
 
     private void handleReadable(SelectionKey key) throws IOException {
         SocketChannel client = (SocketChannel) key.channel();
         IrcSession session = (IrcSession) key.attachment();
-        session =this.sessions.get(client);
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         int bytesRead = client.read(buffer);
         if (bytesRead == -1) {
             System.out.println("Client disconnected " + client.getRemoteAddress());
             key.cancel();
+            this.ircServerState.removeSession(session);
             client.close();
-
             return;
         }
-        buffer.flip();
+//        buffer.flip();
         String message = new String(buffer.array(), 0, bytesRead);
         System.out.println("Received: " + message);
         List<String> lines = session.onDataReceived(buffer, bytesRead);
         for (String line: lines) {
             System.out.println("IRC message -> " + line);
+            this.ircCommandQueue.add(new IrcCommand(session.getChannel(), line));
+            System.out.println(this.ircCommandQueue.getLast().getRawCommand());
         }
     }
 }

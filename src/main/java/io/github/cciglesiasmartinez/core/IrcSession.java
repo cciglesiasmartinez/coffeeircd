@@ -1,17 +1,26 @@
 package io.github.cciglesiasmartinez.core;
 
-import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-@AllArgsConstructor
+@Getter
+@Setter
 public class IrcSession {
 
     private final SocketChannel channel;
     private final StringBuilder readBuffer = new StringBuilder();
+
+    private volatile String nick;
+    private volatile String username;
+
+    public IrcSession(SocketChannel channel) {
+        this.channel = channel;
+    }
 
     public List<String> onDataReceived(ByteBuffer buffer, int bytesRead) {
         String chunk = new String(buffer.array(), 0, bytesRead);
