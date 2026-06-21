@@ -10,12 +10,4 @@ import java.nio.channels.SocketChannel;
  * This class represents an inbound TCP request meant to be placed in a {@link java.util.concurrent.BlockingDeque}
  * pending to be processed by any of the threads available.
  */
-@AllArgsConstructor
-@Getter
-@Setter
-public class IrcRequest {
-
-    private SocketChannel client;
-    private String rawCommand;
-
-}
+record IrcRequest(SocketChannel client, String rawCommand) {}

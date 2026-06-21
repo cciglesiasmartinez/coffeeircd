@@ -91,7 +91,7 @@ public class IrcServer {
         for (String line: lines) {
             System.out.println("IRC message -> " + line);
             this.ircRequestQueue.add(new IrcRequest(session.getClient(), line));
-            System.out.println(this.ircRequestQueue.getLast().getRawCommand());
+            System.out.println(this.ircRequestQueue.getLast().rawCommand());
         }
     }
 }

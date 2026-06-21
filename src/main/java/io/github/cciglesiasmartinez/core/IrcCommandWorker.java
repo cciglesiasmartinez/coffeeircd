@@ -17,7 +17,7 @@ public class IrcCommandWorker implements Runnable {
         while (true) {
             try {
                 IrcRequest request = queue.take();
-                System.out.println("Thread proccessing >> " + request.getRawCommand());
+                System.out.println("Thread proccessing >> " + request.rawCommand());
                 parseIrcRequest(request);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -27,9 +27,9 @@ public class IrcCommandWorker implements Runnable {
     }
 
     private void parseIrcRequest(IrcRequest request) {
-        String raWcommand = request.getRawCommand();
+        String raWcommand = request.rawCommand();
         String[] tokens = raWcommand.split(" ");
-        IrcSession session = state.getSession(request.getClient());
+        IrcSession session = state.getSession(request.client());
         if (session.isRegistered()) {
             switch (tokens[2]) {
                 case "PRIVMSG":
