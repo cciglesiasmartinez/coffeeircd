@@ -12,14 +12,15 @@ import java.util.List;
 @Setter
 public class IrcSession {
 
-    private final SocketChannel channel;
+    private final SocketChannel client;
     private final StringBuilder readBuffer = new StringBuilder();
 
     private volatile String nick;
     private volatile String username;
+    private volatile boolean registered = false;
 
-    public IrcSession(SocketChannel channel) {
-        this.channel = channel;
+    public IrcSession(SocketChannel client) {
+        this.client = client;
     }
 
     public List<String> onDataReceived(ByteBuffer buffer, int bytesRead) {

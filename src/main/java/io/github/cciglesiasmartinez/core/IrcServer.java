@@ -14,6 +14,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 
+/**
+ *  This is class represents the main server loop. It encloses primarily a NIO {@link Selector} that manages TCP
+ *  connections and an {@link ExecutorService} worker thread pool.
+ */
 public class IrcServer {
 
     private static final int THREADS = 2;
@@ -22,7 +26,7 @@ public class IrcServer {
     private Selector selector;
     private ServerSocketChannel serverSocketChannel;
     private final IrcServerState ircServerState = new IrcServerState();
-    private final BlockingDeque<IrcCommand> ircCommandQueue = new LinkedBlockingDeque<>();
+    private final BlockingDeque<IrcRequest> ircRequestQueue = new LinkedBlockingDeque<>();
 
     public IrcServer(int port) {
         this.port = port;
@@ -36,7 +40,7 @@ public class IrcServer {
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
         ExecutorService workerPool = Executors.newFixedThreadPool(THREADS);
         for (int i = 0; i < THREADS; i++) {
-            workerPool.submit(new IrcCommandWorker(ircCommandQueue, ircServerState));
+            workerPool.submit(new IrcCommandWorker(ircRequestQueue, ircServerState));
         }
         System.out.println("Server listening on port " + port);
         loop();
@@ -86,8 +90,8 @@ public class IrcServer {
         List<String> lines = session.onDataReceived(buffer, bytesRead);
         for (String line: lines) {
             System.out.println("IRC message -> " + line);
-            this.ircCommandQueue.add(new IrcCommand(session.getChannel(), line));
-            System.out.println(this.ircCommandQueue.getLast().getRawCommand());
+            this.ircRequestQueue.add(new IrcRequest(session.getClient(), line));
+            System.out.println(this.ircRequestQueue.getLast().getRawCommand());
         }
     }
 }
